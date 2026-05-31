@@ -3,12 +3,10 @@ const store = require("./store");
 const CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
 const GQL_URL = "https://gql.twitch.tv/gql";
 
-// State management
 let rssHistory = [];
-let activeStreams = new Map(); // Map<channelName, { id, startTime }>
+let activeStreams = new Map();
 
 async function checkChannel(channelName) {
-  // requesting stream title and createdAt
   const query = `query { user(login: "${channelName}") { stream { id title createdAt } } }`;
 
   try {
@@ -22,17 +20,14 @@ async function checkChannel(channelName) {
     });
 
     if (!response.ok) {
-      // console.error(`Failed to fetch ${channelName}: ${response.statusText}`);
       return null;
     }
 
     const json = await response.json();
     if (json.errors) {
-      // console.error(`GQL errors for ${channelName}:`, json.errors);
       return null;
     }
 
-    // Check if stream is active (id is not null)
     const stream = json.data?.user?.stream;
 
     if (stream && stream.id) {
@@ -57,21 +52,15 @@ async function updateFeeds() {
   const channels = store.getChannels();
   const now = new Date();
 
-  // Parallel fetch
   const results = await Promise.all(channels.map(checkChannel));
 
   results.forEach((status) => {
-    if (!status) return; // Fetch failed
+    if (!status) return;
 
     const lastSession = activeStreams.get(status.name);
 
     if (status.isLive) {
-      // It is live now. Was it live before?
-      // We check if the stream ID changed to detect a new stream session
-
       if (!lastSession || lastSession.id !== status.id) {
-        // NEW STREAM DETECTED
-        // Use Twitch's createdAt if available, else fallback to now
         const startTime = status.startTime ? new Date(status.startTime) : now;
 
         activeStreams.set(status.name, { id: status.id, startTime });
@@ -87,13 +76,10 @@ async function updateFeeds() {
           pubDate: startTime.toUTCString(),
         };
 
-        // Add to history
         rssHistory.unshift(item);
       }
     } else {
-      // Not live
       if (lastSession) {
-        // WENT OFFLINE
         const durationMs = now - lastSession.startTime;
         const hours = Math.floor(durationMs / 3600000);
         const minutes = Math.floor((durationMs % 3600000) / 60000);
@@ -119,7 +105,6 @@ async function updateFeeds() {
     }
   });
 
-  // Keep history manageable (last 50 items)
   if (rssHistory.length > 50) {
     rssHistory = rssHistory.slice(0, 50);
   }
@@ -129,12 +114,11 @@ function startTracking(intervalMinutes = 2) {
   console.log(
     `Starting Twitch tracker (poll every ${intervalMinutes} mins)...`,
   );
-  updateFeeds(); // Initial check
+  updateFeeds();
   setInterval(updateFeeds, intervalMinutes * 60 * 1000);
 }
 
 function generateRSS(selfLink) {
-  // Return the XML based on memory history
   const now = new Date().toUTCString();
   const atomLink = selfLink
     ? `\n  <atom:link href="${selfLink}" rel="self" type="application/rss+xml" />`
@@ -151,7 +135,6 @@ function generateRSS(selfLink) {
 `;
 
   rssHistory.forEach((item) => {
-    // Escaping
     const safeTitle = item.title
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")

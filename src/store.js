@@ -4,14 +4,12 @@ const path = require('path');
 const DATA_FILE = path.join(__dirname, '../data/channels.json');
 const DATA_DIR = path.dirname(DATA_FILE);
 
-// Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Ensure file exists
 if (!fs.existsSync(DATA_FILE)) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(["xqc", "erobb221", "zoil"])); // Defaults from twitch.sh
+  fs.writeFileSync(DATA_FILE, JSON.stringify(["xqc", "erobb221", "zoil"]));
 }
 
 function getChannels() {

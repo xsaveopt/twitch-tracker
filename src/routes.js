@@ -3,7 +3,6 @@ const router = express.Router();
 
 const tracker = require("./tracker");
 
-// RSS Feed
 const rssPath = process.env.RSS_PATH || "/rss";
 router.get(rssPath, async (req, res) => {
   try {

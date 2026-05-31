@@ -7,10 +7,8 @@ const tracker = require('./tracker');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Start tracker loop (every 2 minutes)
 tracker.startTracking(2);
 
-// API Routes
 app.use('/', routes);
 
 app.listen(port, () => {
