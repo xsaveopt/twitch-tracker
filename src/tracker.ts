@@ -1,12 +1,50 @@
-const store = require("./store");
+import * as store from "./store.ts";
 
 const CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
 const GQL_URL = "https://gql.twitch.tv/gql";
 
-let rssHistory = [];
-let activeStreams = new Map();
+interface GqlResponse {
+  errors?: unknown;
+  data?: {
+    user?: {
+      stream?: {
+        id?: string;
+        title?: string;
+        createdAt?: string;
+      } | null;
+    } | null;
+  };
+}
 
-async function checkChannel(channelName) {
+type ChannelStatus =
+  | {
+      name: string;
+      id: string;
+      title: string;
+      startTime?: string;
+      link: string;
+      isLive: true;
+    }
+  | { name: string; isLive: false };
+
+interface StreamSession {
+  id: string;
+  startTime: Date;
+}
+
+interface RssItem {
+  title: string;
+  channel: string;
+  guid: string;
+  link: string;
+  description: string;
+  pubDate: string;
+}
+
+let rssHistory: RssItem[] = [];
+const activeStreams = new Map<string, StreamSession>();
+
+async function checkChannel(channelName: string): Promise<ChannelStatus | null> {
   const query = `query { user(login: "${channelName}") { stream { id title createdAt } } }`;
 
   try {
@@ -23,7 +61,7 @@ async function checkChannel(channelName) {
       return null;
     }
 
-    const json = await response.json();
+    const json = (await response.json()) as GqlResponse;
     if (json.errors) {
       return null;
     }
@@ -48,14 +86,14 @@ async function checkChannel(channelName) {
   }
 }
 
-async function updateFeeds() {
+export async function updateFeeds(): Promise<void> {
   const channels = store.getChannels();
   const now = new Date();
 
   const results = await Promise.all(channels.map(checkChannel));
 
-  results.forEach((status) => {
-    if (!status) return;
+  for (const status of results) {
+    if (!status) continue;
 
     const lastSession = activeStreams.get(status.name);
 
@@ -67,58 +105,48 @@ async function updateFeeds() {
 
         console.log(`[${now.toISOString()}] ${status.name} went live`);
 
-        const item = {
+        rssHistory.unshift({
           title: `LIVE: ${status.name} - ${status.title}`,
           channel: status.name,
           guid: `twitch:${status.name}:${status.id}`,
           link: status.link,
           description: `<p><strong>${status.name}</strong> is live playing: ${status.title}</p>`,
           pubDate: startTime.toUTCString(),
-        };
-
-        rssHistory.unshift(item);
+        });
       }
-    } else {
-      if (lastSession) {
-        const durationMs = now - lastSession.startTime;
-        const hours = Math.floor(durationMs / 3600000);
-        const minutes = Math.floor((durationMs % 3600000) / 60000);
-        const durationStr = `${hours}h ${minutes}m`;
+    } else if (lastSession) {
+      const durationMs = now.getTime() - lastSession.startTime.getTime();
+      const hours = Math.floor(durationMs / 3600000);
+      const minutes = Math.floor((durationMs % 3600000) / 60000);
+      const durationStr = `${hours}h ${minutes}m`;
 
-        console.log(
-          `[${now.toISOString()}] ${status.name} went offline (Duration: ${durationStr})`,
-        );
+      console.log(`[${now.toISOString()}] ${status.name} went offline (Duration: ${durationStr})`);
 
-        const item = {
-          title: `OFFLINE: ${status.name} (Streamed for ${durationStr})`,
-          channel: status.name,
-          guid: `twitch:${status.name}:offline:${now.getTime()}`,
-          link: `https://www.twitch.tv/${status.name}`,
-          description: `<p>${status.name} has gone offline.</p><p>Total stream duration: ${durationStr}</p>`,
-          pubDate: now.toUTCString(),
-        };
+      rssHistory.unshift({
+        title: `OFFLINE: ${status.name} (Streamed for ${durationStr})`,
+        channel: status.name,
+        guid: `twitch:${status.name}:offline:${now.getTime()}`,
+        link: `https://www.twitch.tv/${status.name}`,
+        description: `<p>${status.name} has gone offline.</p><p>Total stream duration: ${durationStr}</p>`,
+        pubDate: now.toUTCString(),
+      });
 
-        rssHistory.unshift(item);
-
-        activeStreams.delete(status.name);
-      }
+      activeStreams.delete(status.name);
     }
-  });
+  }
 
   if (rssHistory.length > 50) {
     rssHistory = rssHistory.slice(0, 50);
   }
 }
 
-function startTracking(intervalMinutes = 2) {
-  console.log(
-    `Starting Twitch tracker (poll every ${intervalMinutes} mins)...`,
-  );
-  updateFeeds();
-  setInterval(updateFeeds, intervalMinutes * 60 * 1000);
+export function startTracking(intervalMinutes = 2): void {
+  console.log(`Starting Twitch tracker (poll every ${intervalMinutes} mins)...`);
+  void updateFeeds();
+  setInterval(() => void updateFeeds(), intervalMinutes * 60 * 1000);
 }
 
-function generateRSS(selfLink) {
+export function generateRSS(selfLink?: string): string {
   const now = new Date().toUTCString();
   const atomLink = selfLink
     ? `\n  <atom:link href="${selfLink}" rel="self" type="application/rss+xml" />`
@@ -134,11 +162,8 @@ function generateRSS(selfLink) {
   <language>en-US</language>
 `;
 
-  rssHistory.forEach((item) => {
-    const safeTitle = item.title
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+  for (const item of rssHistory) {
+    const safeTitle = item.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
     xml += `
   <item>
@@ -148,7 +173,7 @@ function generateRSS(selfLink) {
     <description><![CDATA[${item.description}]]></description>
     <pubDate>${item.pubDate}</pubDate>
   </item>`;
-  });
+  }
 
   xml += `
 </channel>
@@ -156,5 +181,3 @@ function generateRSS(selfLink) {
 
   return xml;
 }
-
-module.exports = { generateRSS, startTracking, updateFeeds };

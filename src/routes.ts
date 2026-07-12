@@ -1,15 +1,17 @@
-const express = require("express");
-const router = express.Router();
+import { Router } from "express";
+import type { Request, Response } from "express";
+import * as tracker from "./tracker.ts";
 
-const tracker = require("./tracker");
+const router = Router();
 
 const rssPath = process.env.RSS_PATH || "/rss";
-router.get(rssPath, async (req, res) => {
+
+router.get(rssPath, async (req: Request, res: Response) => {
   try {
     const protocol = req.protocol;
     const host = req.get("host");
     const selfLink = `${protocol}://${host}${req.originalUrl}`;
-    const xml = await tracker.generateRSS(selfLink);
+    const xml = tracker.generateRSS(selfLink);
     res.set("Content-Type", "application/rss+xml");
     res.send(xml);
   } catch (error) {
@@ -18,4 +20,4 @@ router.get(rssPath, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

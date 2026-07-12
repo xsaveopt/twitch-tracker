@@ -1,7 +1,7 @@
-const fs = require('fs');
-const path = require('path');
+import fs from "node:fs";
+import path from "node:path";
 
-const DATA_FILE = path.join(__dirname, '../data/channels.json');
+const DATA_FILE = path.join(import.meta.dirname, "../data/channels.json");
 const DATA_DIR = path.dirname(DATA_FILE);
 
 if (!fs.existsSync(DATA_DIR)) {
@@ -12,17 +12,17 @@ if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(["xqc", "erobb221", "zoil"]));
 }
 
-function getChannels() {
+export function getChannels(): string[] {
   try {
-    const data = fs.readFileSync(DATA_FILE, 'utf8');
-    return JSON.parse(data);
+    const data = fs.readFileSync(DATA_FILE, "utf8");
+    return JSON.parse(data) as string[];
   } catch (err) {
     console.error("Error reading channels:", err);
     return [];
   }
 }
 
-function addChannel(channel) {
+export function addChannel(channel: string): void {
   const channels = getChannels();
   if (!channels.includes(channel)) {
     channels.push(channel);
@@ -30,14 +30,7 @@ function addChannel(channel) {
   }
 }
 
-function removeChannel(channel) {
-  let channels = getChannels();
-  channels = channels.filter(c => c !== channel);
+export function removeChannel(channel: string): void {
+  const channels = getChannels().filter((c) => c !== channel);
   fs.writeFileSync(DATA_FILE, JSON.stringify(channels, null, 2));
 }
-
-module.exports = {
-  getChannels,
-  addChannel,
-  removeChannel
-};

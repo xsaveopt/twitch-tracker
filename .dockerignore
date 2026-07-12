@@ -1,7 +1,9 @@
 .dockerignore
 .git
 .gitignore
+.github
 data
 Dockerfile
 node_modules
 README.md
+test

@@ -1,49 +1,48 @@
 # Twitch RSS Tracker
 
-A lightweight Node.js application that tracks Twitch channels and generates an RSS feed when they go live.
+A lightweight TypeScript service that tracks Twitch channels and generates an RSS feed when they go live.
+It polls Twitch's public GraphQL endpoint on an interval and records live and offline events into a feed.
+
+The code is plain TypeScript run directly by Node's type stripping, so there is no build step.
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) (v16+ recommended, Dockerfile uses v24)
-- npm
+- [Node.js](https://nodejs.org/) 24 or newer, which is what enables running `.ts` files without a build.
+- [pnpm](https://pnpm.io/) as the package manager.
 
-## Getting Started
+## Local development
 
-### Local Development
+Install the dependencies once.
 
-1.  **Install dependencies:**
+```bash
+pnpm install
+```
 
-    ```bash
-    npm install
-    ```
+Then run the server, optionally in watch mode while you work.
 
-2.  **Run the application:**
+```bash
+pnpm start
+pnpm dev
+```
 
-    ```bash
-    # Standard start
-    npm run start
+The full check suite mirrors what CI runs.
 
-    # Development mode (with watch)
-    npm run dev
-    ```
+```bash
+pnpm lint && pnpm fmt:check && pnpm typecheck && pnpm test
+```
 
-### Docker
+## Docker
 
-1.  **Build the image:**
+Build the image and run it, mounting `data/` if you want channel changes to persist across restarts.
 
-    ```bash
-    docker build -t twitch-tracker .
-    ```
-
-2.  **Run the container:**
-    ```bash
-    docker run -p 3000:3000 -v $(pwd)/data:/app/data twitch-tracker
-    ```
-    _Note: The volume mount `-v` is optional but recommended if you want to persist the `channels.json` changes._
+```bash
+docker build -t twitch-tracker .
+docker run -p 3000:3000 -v "$(pwd)/data:/app/data" twitch-tracker
+```
 
 ## Configuration
 
-You can configure the application using environment variables:
+The service reads two environment variables.
 
 | Variable   | Default | Description                     |
 | :--------- | :------ | :------------------------------ |
@@ -52,11 +51,5 @@ You can configure the application using environment variables:
 
 ## Usage
 
-### RSS Feed
-
-Access the RSS feed at:
-`http://localhost:3000/rss` (or your configured `RSS_PATH`)
-
-### Managing Channels
-
-The application reads channels from `data/channels.json`. You can modify this file directly to add or remove channels.
+The RSS feed is served at `http://localhost:3000/rss`, or whatever `RSS_PATH` you set.
+Tracked channels live in `data/channels.json`, which you can edit directly to add or remove channels.
