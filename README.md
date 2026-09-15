@@ -1,55 +1,46 @@
-# Twitch RSS Tracker
+# Twitch Tracker
 
-A lightweight TypeScript service that tracks Twitch channels and generates an RSS feed when they go live.
-It polls Twitch's public GraphQL endpoint on an interval and records live and offline events into a feed.
+Twitch Tracker watches a list of Twitch channels and turns their live and offline changes into an RSS feed.
+Every two minutes it asks Twitch's public GraphQL endpoint whether each channel is streaming, adds an item when a channel goes live, and adds another with the stream duration when it goes offline.
+The feed keeps the latest 50 items in memory, so it starts empty again after a restart.
 
-The code is plain TypeScript run directly by Node's type stripping, so there is no build step.
+## Running it
 
-## Prerequisites
+The server is plain TypeScript run directly by Node 26, with pnpm as the package manager.
 
-- [Node.js](https://nodejs.org/) 24 or newer, which is what enables running `.ts` files without a build.
-- [pnpm](https://pnpm.io/) as the package manager.
-
-## Local development
-
-Install the dependencies once.
-
-```bash
+```sh
 pnpm install
-```
-
-Then run the server, optionally in watch mode while you work.
-
-```bash
 pnpm start
-pnpm dev
 ```
 
-The full check suite mirrors what CI runs.
+The feed is then served at /rss on port 3000.
+Running pnpm dev restarts the server whenever a file changes, and CI runs these checks:
 
-```bash
+```sh
 pnpm lint && pnpm fmt:check && pnpm typecheck && pnpm test
 ```
 
 ## Docker
 
-Build the image and run it, mounting `data/` if you want channel changes to persist across restarts.
+Tagged releases publish an image to ghcr.io/xsaveopt/twitch-tracker, and every push to main updates the dev tag.
+To build one yourself, mount /app/data to keep the channel list across restarts.
+The container runs as the node user, so the mounted folder has to be writable by uid 1000.
 
-```bash
+```sh
 docker build -t twitch-tracker .
 docker run -p 3000:3000 -v "$(pwd)/data:/app/data" twitch-tracker
 ```
 
 ## Configuration
 
-The service reads two environment variables.
+Tracked channels live in data/channels.json as a JSON array of login names.
+The file is created with a few sample channels on first start, and it is read again on every poll, so edits take effect at the next check.
 
-| Variable   | Default | Description                     |
-| :--------- | :------ | :------------------------------ |
-| `PORT`     | `3000`  | The port the server listens on. |
-| `RSS_PATH` | `/rss`  | The URL path for the RSS feed.  |
+| Variable   | Default | Description                    |
+| :--------- | :------ | :----------------------------- |
+| `PORT`     | `3000`  | Port the server listens on     |
+| `RSS_PATH` | `/rss`  | URL path the feed is served at |
 
-## Usage
+## License
 
-The RSS feed is served at `http://localhost:3000/rss`, or whatever `RSS_PATH` you set.
-Tracked channels live in `data/channels.json`, which you can edit directly to add or remove channels.
+Twitch Tracker is licensed under the GPL-2.0, see LICENSE.
