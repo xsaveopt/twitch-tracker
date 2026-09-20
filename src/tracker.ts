@@ -146,10 +146,23 @@ export function startTracking(intervalMinutes = 2): void {
   setInterval(() => void updateFeeds(), intervalMinutes * 60 * 1000);
 }
 
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function escapeCdata(value: string): string {
+  return value.replace(/]]>/g, "]]&gt;");
+}
+
 export function generateRSS(selfLink?: string): string {
   const now = new Date().toUTCString();
   const atomLink = selfLink
-    ? `\n  <atom:link href="${selfLink}" rel="self" type="application/rss+xml" />`
+    ? `\n  <atom:link href="${escapeXml(selfLink)}" rel="self" type="application/rss+xml" />`
     : "";
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -163,15 +176,13 @@ export function generateRSS(selfLink?: string): string {
 `;
 
   for (const item of rssHistory) {
-    const safeTitle = item.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
     xml += `
   <item>
-    <title>${safeTitle}</title>
-    <guid isPermaLink="false">${item.guid}</guid>
-    <link>${item.link}</link>
-    <description><![CDATA[${item.description}]]></description>
-    <pubDate>${item.pubDate}</pubDate>
+    <title>${escapeXml(item.title)}</title>
+    <guid isPermaLink="false">${escapeXml(item.guid)}</guid>
+    <link>${escapeXml(item.link)}</link>
+    <description><![CDATA[${escapeCdata(item.description)}]]></description>
+    <pubDate>${escapeXml(item.pubDate)}</pubDate>
   </item>`;
   }
 
