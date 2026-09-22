@@ -41,8 +41,13 @@ interface RssItem {
   pubDate: string;
 }
 
+const STALE_POLL_MULTIPLE = 3;
+
 let rssHistory: RssItem[] = [];
 const activeStreams = new Map<string, StreamSession>();
+let trackingStartedAt: Date | null = null;
+let lastSuccessfulPollAt: Date | null = null;
+let pollIntervalMs = 2 * 60 * 1000;
 
 async function checkChannel(channelName: string): Promise<ChannelStatus | null> {
   const query = `query { user(login: "${channelName}") { stream { id title createdAt } } }`;
@@ -91,6 +96,10 @@ export async function updateFeeds(): Promise<void> {
   const now = new Date();
 
   const results = await Promise.all(channels.map(checkChannel));
+
+  if (results.some((status) => status !== null)) {
+    lastSuccessfulPollAt = now;
+  }
 
   for (const status of results) {
     if (!status) continue;
@@ -142,8 +151,20 @@ export async function updateFeeds(): Promise<void> {
 
 export function startTracking(intervalMinutes = 2): void {
   console.log(`Starting Twitch tracker (poll every ${intervalMinutes} mins)...`);
+  pollIntervalMs = intervalMinutes * 60 * 1000;
+  trackingStartedAt = new Date();
   void updateFeeds();
   setInterval(() => void updateFeeds(), intervalMinutes * 60 * 1000);
+}
+
+export function isHealthy(): boolean {
+  const channels = store.getChannels();
+  if (channels.length === 0 || !trackingStartedAt) {
+    return true;
+  }
+
+  const reference = lastSuccessfulPollAt ?? trackingStartedAt;
+  return Date.now() - reference.getTime() <= pollIntervalMs * STALE_POLL_MULTIPLE;
 }
 
 function escapeXml(value: string): string {

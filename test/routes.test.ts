@@ -57,6 +57,15 @@ describe("routes", () => {
     assert.match(body, new RegExp(`atom:link href="${base}/rss"`));
   });
 
+  it("reports healthy on /health", async () => {
+    const response = await fetch(`${base}/health`);
+    const body = await response.text();
+
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type") ?? "", /text\/plain/);
+    assert.equal(body, "up");
+  });
+
   it("answers 404 on any other path", async () => {
     const response = await fetch(`${base}/feed.xml`);
 

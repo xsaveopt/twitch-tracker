@@ -6,6 +6,14 @@ const router = Router();
 
 const rssPath = process.env.RSS_PATH || "/rss";
 
+router.get("/health", (_req: Request, res: Response) => {
+  const healthy = tracker.isHealthy();
+  res
+    .status(healthy ? 200 : 503)
+    .type("text/plain")
+    .send(healthy ? "up" : "degraded");
+});
+
 router.get(rssPath, async (req: Request, res: Response) => {
   try {
     const protocol = req.protocol;
