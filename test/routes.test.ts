@@ -57,13 +57,19 @@ describe("routes", () => {
     assert.match(body, new RegExp(`atom:link href="${base}/rss"`));
   });
 
-  it("reports healthy on /health", async () => {
-    const response = await fetch(`${base}/health`);
+  it("reports healthy under the RSS_PATH subpath", async () => {
+    const response = await fetch(`${base}/rss/health`);
     const body = await response.text();
 
     assert.equal(response.status, 200);
     assert.match(response.headers.get("content-type") ?? "", /text\/plain/);
     assert.equal(body, "up");
+  });
+
+  it("does not serve health at the bare root", async () => {
+    const response = await fetch(`${base}/health`);
+
+    assert.equal(response.status, 404);
   });
 
   it("answers 404 on any other path", async () => {

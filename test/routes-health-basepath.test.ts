@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { after, before, describe, it } from "node:test";
 
-process.env.RSS_PATH = "/blabla/rss";
+process.env.RSS_PATH = "/blabla";
 
 const router = (await import("../src/routes.ts")).default;
 
@@ -14,7 +14,7 @@ app.use("/", router);
 let server: Server;
 let base: string;
 
-describe("routes with a subpathed RSS_PATH", () => {
+describe("routes with RSS_PATH set to a base path", () => {
   before(async () => {
     await new Promise<void>((resolve) => {
       server = app.listen(0, "127.0.0.1", () => resolve());
@@ -29,7 +29,7 @@ describe("routes with a subpathed RSS_PATH", () => {
   });
 
   it("serves health under RSS_PATH plus /health", async () => {
-    const response = await fetch(`${base}/blabla/rss/health`);
+    const response = await fetch(`${base}/blabla/health`);
     const body = await response.text();
 
     assert.equal(response.status, 200);
