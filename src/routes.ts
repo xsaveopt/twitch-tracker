@@ -1,12 +1,19 @@
+import path from "node:path";
 import { Router } from "express";
 import type { Request, Response } from "express";
 import * as tracker from "./tracker.ts";
 
 const router = Router();
 
-const rssPath = process.env.RSS_PATH || "/rss";
+export function healthPathFor(rssPath: string): string {
+  const rssDir = path.posix.dirname(rssPath.replace(/\/+$/, "") || "/");
+  return rssDir === "/" ? "/health" : `${rssDir}/health`;
+}
 
-router.get("/health", (_req: Request, res: Response) => {
+const rssPath = process.env.RSS_PATH || "/rss";
+export const healthPath = healthPathFor(rssPath);
+
+router.get(healthPath, (_req: Request, res: Response) => {
   const healthy = tracker.isHealthy();
   res
     .status(healthy ? 200 : 503)
