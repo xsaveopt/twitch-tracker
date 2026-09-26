@@ -12,10 +12,17 @@ if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(["xqc", "erobb221", "zoil"]));
 }
 
+function readChannels(): string[] {
+  const parsed: unknown = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+  if (!Array.isArray(parsed)) {
+    throw new Error("channels file does not hold a JSON array");
+  }
+  return parsed as string[];
+}
+
 export function getChannels(): string[] {
   try {
-    const data = fs.readFileSync(DATA_FILE, "utf8");
-    return JSON.parse(data) as string[];
+    return readChannels();
   } catch (err) {
     console.error("Error reading channels:", err);
     return [];
@@ -23,7 +30,7 @@ export function getChannels(): string[] {
 }
 
 export function addChannel(channel: string): void {
-  const channels = getChannels();
+  const channels = readChannels();
   if (!channels.includes(channel)) {
     channels.push(channel);
     fs.writeFileSync(DATA_FILE, JSON.stringify(channels, null, 2));
