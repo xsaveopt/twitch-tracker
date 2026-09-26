@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
+import http from "node:http";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { after, afterEach, before, describe, it, mock } from "node:test";
@@ -55,6 +56,36 @@ describe("routes", () => {
     const body = await response.text();
 
     assert.match(body, new RegExp(`atom:link href="${base}/rss"`));
+  });
+
+  it("escapes a hostile Host header in the atom self link", async () => {
+    const { port } = server.address() as AddressInfo;
+    const body = await new Promise<string>((resolve, reject) => {
+      const request = http.request(
+        {
+          host: "127.0.0.1",
+          port,
+          path: "/rss",
+          headers: { host: 'feed.example"/><injected a="&' },
+        },
+        (response) => {
+          let data = "";
+          response.setEncoding("utf8");
+          response.on("data", (chunk: string) => {
+            data += chunk;
+          });
+          response.on("end", () => resolve(data));
+        },
+      );
+      request.on("error", reject);
+      request.end();
+    });
+
+    assert.match(
+      body,
+      /atom:link href="http:\/\/feed\.example&quot;\/&gt;&lt;injected a=&quot;&amp;\/rss"/,
+    );
+    assert.doesNotMatch(body, /<injected/);
   });
 
   it("reports healthy under the RSS_PATH subpath", async () => {

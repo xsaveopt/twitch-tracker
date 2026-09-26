@@ -23,6 +23,15 @@ describe("healthPathFor", () => {
     assert.equal(healthPathFor("/blabla/rss/"), "/blabla/rss/health");
   });
 
+  it("serves health at /health when RSS_PATH is the root", () => {
+    assert.equal(healthPathFor("/"), "/health");
+  });
+
+  it("collapses repeated trailing slashes", () => {
+    assert.equal(healthPathFor("///"), "/health");
+    assert.equal(healthPathFor("/rss//"), "/rss/health");
+  });
+
   it("never resolves to the bare root path", () => {
     assert.notEqual(healthPathFor("/rss"), "/health");
     assert.notEqual(healthPathFor("/blabla"), "/health");
