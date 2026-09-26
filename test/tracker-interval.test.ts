@@ -86,6 +86,8 @@ describe("startTracking", () => {
     assert.equal(String(poll.mock.calls[0].arguments[0]), "https://gql.twitch.tv/gql");
     const init = poll.mock.calls[0].arguments[1] as RequestInit;
     assert.equal(init.method, "POST");
-    assert.match(String(init.body), /user\(login: \\"alpha\\"\)/);
+    const body = JSON.parse(String(init.body)) as { query: string; variables?: { login?: string } };
+    assert.match(body.query, /user\(login: \$login\)/);
+    assert.equal(body.variables?.login, "alpha");
   });
 });

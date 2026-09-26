@@ -33,14 +33,8 @@ function mockPoll() {
 
 function requestedLogin(body: GqlBody): unknown {
   const variable = /user\(\s*login:\s*\$(\w+)\s*\)/.exec(body.query);
-  if (variable) return body.variables?.[variable[1]];
-  const literal = /user\(\s*login:\s*("(?:[^"\\]|\\.)*")\s*\)/.exec(body.query);
-  if (!literal) return undefined;
-  try {
-    return JSON.parse(literal[1]);
-  } catch {
-    return literal[1];
-  }
+  assert.ok(variable, "login must be passed as a graphql variable");
+  return body.variables?.[variable[1]];
 }
 
 async function pollFor(name: string): Promise<GqlBody> {
@@ -87,5 +81,7 @@ describe("checkChannel graphql query", () => {
 
     assert.equal(requestedLogin(body), name);
     assert.equal(body.query.match(/user\(/g)?.length, 1);
+    assert.ok(!body.query.includes(name));
+    assert.ok(!body.query.includes("other:"));
   });
 });

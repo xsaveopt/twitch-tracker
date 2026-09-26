@@ -50,7 +50,7 @@ let lastSuccessfulPollAt: Date | null = null;
 let pollIntervalMs = 2 * 60 * 1000;
 
 async function checkChannel(channelName: string): Promise<ChannelStatus | null> {
-  const query = `query { user(login: "${channelName}") { stream { id title createdAt } } }`;
+  const query = `query ($login: String!) { user(login: $login) { stream { id title createdAt } } }`;
 
   try {
     const response = await fetch(GQL_URL, {
@@ -59,7 +59,7 @@ async function checkChannel(channelName: string): Promise<ChannelStatus | null> 
         "Client-ID": CLIENT_ID,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, variables: { login: channelName } }),
     });
 
     if (!response.ok) {
@@ -108,7 +108,8 @@ export async function updateFeeds(): Promise<void> {
 
     if (status.isLive) {
       if (!lastSession || lastSession.id !== status.id) {
-        const startTime = status.startTime ? new Date(status.startTime) : now;
+        const parsed = status.startTime ? new Date(status.startTime) : null;
+        const startTime = parsed && !Number.isNaN(parsed.getTime()) ? parsed : now;
 
         activeStreams.set(status.name, { id: status.id, startTime });
 
